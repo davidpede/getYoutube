@@ -29,7 +29,7 @@ class Search {
    * CURL request and return data.
    *
    * @param string $url The url to fetch.
-   * @return mixed $data The data returned.
+   * @return string $data The json data returned.
    */
   public function file_get_contents_curl($url) {
     $ch = curl_init();
@@ -37,15 +37,26 @@ class Search {
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_REFERER, $this->modx->getOption('site_url'));
     curl_setopt($ch, CURLOPT_URL, $url);
+
     $data = curl_exec($ch);
+    $info = curl_getinfo($ch);
     curl_close($ch);
+
+    if ($info['http_code'] !== 200) {
+      $this->modx->log(modX::LOG_LEVEL_ERROR, 'getYoutube() - ' . json_decode($data)->error->message);
+      return false;
+    }
+    
     return $data;
   }
 
   public function channel($channelUrl,$tpl,$tplAlt,$toPlaceholder,$pageToken,$totalVar){
-
-    $json = $this->file_get_contents_curl($channelUrl)
-      or $this->modx->log(modX::LOG_LEVEL_ERROR, 'getYoutube() - Channel API request not recognised');
+    if (!$json = $this->file_get_contents_curl($channelUrl)) {
+      $this->modx->log(modX::LOG_LEVEL_ERROR, 'getYoutube() - Google API returned an error');
+      exit();
+    };
+    
+    $results = '';
     $videos = json_decode($json, TRUE);
 
     /* SETUP PAGINATION */
@@ -97,9 +108,12 @@ class Search {
     return $output;
   }
   public function playlist($playlistUrl,$tpl,$tplAlt,$toPlaceholder,$pageToken,$totalVar){
+    if (!$json = $this->file_get_contents_curl($playlistUrl)) {
+      $this->modx->log(modX::LOG_LEVEL_ERROR, 'getYoutube() - Google API returned an error');
+      exit();
+    };
 
-    $json = $this->file_get_contents_curl($playlistUrl)
-      or $this->modx->log(modX::LOG_LEVEL_ERROR, 'getYoutube() - Playlist API request not recognised');
+    $results = '';
     $videos = json_decode($json, TRUE);
 
     /* SETUP PAGINATION */
@@ -155,8 +169,12 @@ class Search {
     return $output;
   }
   public function video($videoUrl,$tpl,$tplAlt,$toPlaceholder,$totalVar){
+    if (!$json = $this->file_get_contents_curl($videoUrl)) {
+      $this->modx->log(modX::LOG_LEVEL_ERROR, 'getYoutube() - Google API returned an error');
+      exit();
+    };
 
-    $json = $this->file_get_contents_curl($videoUrl) or $this->modx->log(modX::LOG_LEVEL_ERROR, 'getYoutube() - Video API request not recognised');
+    $results = '';
     $videos = json_decode($json, TRUE);
 
     /* SET TOTAL PLACEHOLDERS */
